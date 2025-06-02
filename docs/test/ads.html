@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ads Page - Unlock Feature</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font for a clean look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e2e8f0; /* Light blue-gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 500px;
+            padding: 30px;
+            background-color: #ffffff; /* White background for the card */
+            border-radius: 12px; /* Rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); /* More pronounced shadow */
+            text-align: center;
+        }
+        .countdown-text {
+            font-size: 2.5rem; /* Larger font for countdown */
+            font-weight: 700;
+            color: #1a202c; /* Dark text */
+            margin-bottom: 20px;
+        }
+        .instruction-text {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-bottom: 30px;
+        }
+        .unlock-button {
+            background-color: #10b981; /* Emerald green */
+            color: white;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
+        }
+        .unlock-button:hover {
+            background-color: #059669; /* Darker green on hover */
+            transform: translateY(-3px); /* More pronounced lift */
+        }
+        .unlock-button:active {
+            transform: translateY(0);
+        }
+        .unlock-button:disabled {
+            background-color: #9ca3af; /* Gray for disabled */
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold mb-4 text-gray-800">Watch This Ad to Unlock!</h1>
+        <p class="instruction-text">Please wait for the countdown to finish before clicking the button.</p>
+        <div class="countdown-text" id="countdown">30</div>
+        <button id="unlockButton" class="unlock-button" disabled>Click to Unlock!</button>
+    </div>
+
+    <script>
+        // --- Security-related constants and functions ---
+        // IMPORTANT: This SECRET_SALT must be identical to the one in index.html!
+        // In a real application, this would ideally come from a secure backend
+        // or be generated dynamically and never exposed directly in client-side code for true security.
+        const SECRET_SALT = "YourSuperSecretSaltForUnlockFeature123!@#"; // Change this to a strong, unique string
+
+        // Function to generate SHA-256 hash
+        async function generateSha256Hash(message) {
+            const msgUint8 = new TextEncoder().encode(message); // encode as (utf-8) Uint8Array
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8); // hash the message
+            const hashArray = Array.from(new Uint8Array(hashBuffer)); // convert buffer to byte array
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+            return hashHex;
+        }
+
+        const countdownElement = document.getElementById('countdown');
+        const unlockButton = document.getElementById('unlockButton');
+        let countdownTime = 30; // seconds
+
+        // Countdown logic
+        const countdownInterval = setInterval(() => {
+            countdownTime--;
+            countdownElement.textContent = countdownTime;
+
+            if (countdownTime <= 0) {
+                clearInterval(countdownInterval);
+                countdownElement.textContent = "Time's Up!";
+                unlockButton.disabled = false; // Enable the unlock button
+                unlockButton.textContent = "Click to Unlock!";
+            }
+        }, 1000);
+
+        // Unlock button click handler
+        unlockButton.addEventListener('click', async () => {
+            if (countdownTime > 0) {
+                // This should not happen if button is disabled, but good for robustness
+                console.log("Please wait for the countdown to finish.");
+                return;
+            }
+
+            try {
+                // Calculate the expiration timestamp (current time + 12 hours)
+                const unlockDurationHours = 12;
+                const unlockedUntil = Date.now() + (unlockDurationHours * 60 * 60 * 1000);
+
+                // Generate the signature for tamper detection
+                const signature = await generateSha256Hash(unlockedUntil + SECRET_SALT);
+
+                // Store the timestamp and its signature in localStorage
+                const unlockData = {
+                    unlockedUntil: unlockedUntil,
+                    signature: signature
+                };
+                localStorage.setItem('appUnlockData', JSON.stringify(unlockData));
+                console.log('Unlock data stored in localStorage:', unlockData);
+
+                // Send message to the opener window (main page)
+                if (window.opener) {
+                    window.opener.postMessage({ type: 'unlockApp', status: 'success' }, '*'); // '*' for any origin, restrict in production
+                    console.log('Unlock message sent to main page.');
+                } else {
+                    console.warn('No opener window found. Cannot send unlock message.');
+                }
+
+                // Provide user feedback and close the window
+                countdownElement.textContent = "Unlocked!";
+                unlockButton.disabled = true;
+                unlockButton.textContent = "Unlocked!";
+                // Optionally, close the window after a short delay
+                setTimeout(() => {
+                    window.close();
+                }, 1500); // Close after 1.5 seconds
+            } catch (error) {
+                console.error("Error during unlock process:", error);
+                countdownElement.textContent = "Unlock Failed!";
+                unlockButton.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>

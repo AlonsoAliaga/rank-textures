@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Application Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light gray background */
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #ffffff; /* White background for the card */
+            border-radius: 12px; /* Rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            text-align: center;
+        }
+        .status-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #334155; /* Darker text color */
+        }
+        .action-button {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+        }
+        .action-button:hover {
+            background-color: #4338ca; /* Darker indigo on hover */
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+        .action-button:active {
+            transform: translateY(0); /* Press effect */
+        }
+        .unlocked-message {
+            color: #10b981; /* Green for unlocked */
+        }
+        .locked-message {
+            color: #ef4444; /* Red for locked */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">Main Application</h1>
+        <p class="status-text" id="unlockStatus">Checking unlock status...</p>
+        <button id="openAdsButton" class="action-button">Open Ads Page to Unlock</button>
+    </div>
+
+    <script type="module">
+        // --- Security-related constants and functions ---
+        // IMPORTANT: In a purely client-side scenario, this SECRET_SALT is still visible in your JS code.
+        // It helps deter casual tampering but not a determined attacker.
+        // This SECRET_SALT must be identical to the one in ads.html!
+        const SECRET_SALT = "YourSuperSecretSaltForUnlockFeature123!@#"; // Change this to a strong, unique string
+
+        // Function to generate SHA-256 hash (Web Crypto API)
+        async function generateSha256Hash(message) {
+            const msgUint8 = new TextEncoder().encode(message); // encode as (utf-8) Uint8Array
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8); // hash the message
+            const hashArray = Array.from(new Uint8Array(hashBuffer)); // convert buffer to byte array
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+            return hashHex;
+        }
+
+        // Function to check the unlock status from localStorage
+        async function checkUnlockStatus() {
+            const unlockStatusElement = document.getElementById('unlockStatus');
+            const openAdsButton = document.getElementById('openAdsButton');
+
+            try {
+                const storedUnlockData = localStorage.getItem('appUnlockData');
+                if (!storedUnlockData) {
+                    unlockStatusElement.textContent = 'Locked (No unlock data found).';
+                    unlockStatusElement.className = 'status-text locked-message';
+                    openAdsButton.disabled = false;
+                    return;
+                }
+
+                const { unlockedUntil, signature } = JSON.parse(storedUnlockData);
+
+                // Ensure data types are correct
+                if (typeof unlockedUntil !== 'number' || typeof signature !== 'string') {
+                    console.warn("Invalid unlock data format in localStorage.");
+                    localStorage.removeItem('appUnlockData'); // Clear invalid data
+                    unlockStatusElement.textContent = 'Locked (Invalid data format).';
+                    unlockStatusElement.className = 'status-text locked-message';
+                    openAdsButton.disabled = false;
+                    return;
+                }
+
+                // Recalculate the expected signature to check for tampering
+                const expectedSignature = await generateSha256Hash(unlockedUntil + SECRET_SALT);
+
+                // Check if the signature matches AND if the timestamp is still valid
+                const currentTime = Date.now();
+
+                if (signature === expectedSignature && currentTime < unlockedUntil) {
+                    const remainingTimeMs = unlockedUntil - currentTime;
+                    const remainingHours = Math.floor(remainingTimeMs / (1000 * 60 * 60));
+                    const remainingMinutes = Math.floor((remainingTimeMs % (1000 * 60 * 60)) / (1000 * 60));
+                    unlockStatusElement.textContent = `Unlocked! (Expires in ${remainingHours}h ${remainingMinutes}m)`;
+                    unlockStatusElement.className = 'status-text unlocked-message';
+                    openAdsButton.disabled = true; // Disable button if unlocked
+                } else {
+                    // Either signature mismatch (tampered) or unlock period expired
+                    if (signature !== expectedSignature) {
+                        console.warn("Unlock data tampered with! Signature mismatch.");
+                        // For a real application, you might want to log this to a server
+                        // to detect and analyze tampering attempts.
+                    }
+                    localStorage.removeItem('appUnlockData'); // Clear invalid or expired data
+                    unlockStatusElement.textContent = 'Locked (Expired or Tampered).';
+                    unlockStatusElement.className = 'status-text locked-message';
+                    openAdsButton.disabled = false;
+                }
+            } catch (error) {
+                console.error("Error checking unlock status:", error);
+                localStorage.removeItem('appUnlockData'); // Clear potentially corrupted data
+                unlockStatusElement.textContent = 'Locked (Error checking status).';
+                unlockStatusElement.className = 'status-text locked-message';
+                openAdsButton.disabled = false;
+            }
+        }
+
+        // Event listener for messages from the ads page
+        window.addEventListener('message', async (event) => {
+            // IMPORTANT: In a production environment, you should replace '*' with the specific origin
+            // of your ads.html page (e.g., 'https://your-domain.com').
+            // This prevents malicious sites from sending fake unlock messages.
+            // if (event.origin !== 'https://your-domain.com') return;
+
+            if (event.data && event.data.type === 'unlockApp') {
+                console.log('Received unlock message from ads page.');
+                // The ads page already handles storing the unlock data securely.
+                // Just re-check the status on the main page.
+                await checkUnlockStatus();
+            }
+        });
+
+        // Open the ads page in a new window
+        document.getElementById('openAdsButton').addEventListener('click', () => {
+            // Use window.open with a specific name so subsequent clicks update the same window
+            window.open('ads.html', 'AdsPage', 'width=600,height=700,resizable,scrollbars');
+        });
+
+        // Initial check when the page loads
+        checkUnlockStatus();
+    </script>
+</body>
+</html>
