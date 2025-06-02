@@ -23166,7 +23166,7 @@ function importData() {
         fontData.Preview = rankCanvasPreview.toDataURL();
       }
       //console.log(fontData)
-      //checkFont(empty);
+      checkFont(empty);
   } catch (error) {
       //console.error("Error importing font data:", error);
       importErrorDebug.innerHTML = `Import Error: ${error.message}<br><br>Reminder: Imported font data must be generated with our <a href="https://alonsoaliaga/font-creator" rel="noopener" target="_blank">Font Creator</a> tool.`;
