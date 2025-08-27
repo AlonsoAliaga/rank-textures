@@ -11,7 +11,7 @@ window.addEventListener("message",event=>{
             }else if(typeof value == "object") {
                 console.log(`Object: ${key} => ${value}`);
                 if(value.type == "base64" && typeof value.content == "string") {
-                    zip.file(key,value, {base64: true});
+                    zip.file(key,value.content, {base64: true});
                 }else{
                     console.log(`Object [Malformed]: ${key} => ${value}`);
                 }
