@@ -4,7 +4,7 @@ window.addEventListener("message",event=>{
         console.log(data.download);
         let name = data.name || `download.zip`;
         var zip = new JSZip();
-        for (const [key, value] of data.download) {
+        for (const [key, value] of data.download.entries()) {
             if(typeof value == "string") {
                 console.log(`String: ${key} => ${value}`);
                 zip.file(key,value);
