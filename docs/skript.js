@@ -2,7 +2,12 @@ window.addEventListener("message",event=>{
     let data = event.data;
     if(data && data.download) {
         console.log(data.download);
-        data.download.generateAsync({type:"blob"})
+        var zip = new JSZip();
+        for (const [key, value] of data.download) {
+          console.log(`${key}: ${value}`);
+          zip.file(key,value);
+        }
+        zip.generateAsync({type:"blob"})
             .then(function(blob) {
               saveAsLegacy(blob, "test.zip");
             });
