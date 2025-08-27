@@ -2,14 +2,26 @@ window.addEventListener("message",event=>{
     let data = event.data;
     if(data && data.download) {
         console.log(data.download);
+        let name = data.name || `download.zip`;
         var zip = new JSZip();
         for (const [key, value] of data.download) {
-          console.log(`${key}: ${value}`);
-          zip.file(key,value);
+            if(typeof value == "string") {
+                console.log(`String: ${key} => ${value}`);
+                zip.file(key,value);
+            }else if(typeof value == "object") {
+                console.log(`Object: ${key} => ${value}`);
+                if(value.type == "base64" && typeof value.content == "string") {
+                    zip.file(key,value, {base64: true});
+                }else{
+                    console.log(`Object [Malformed]: ${key} => ${value}`);
+                }
+            }else{
+                console.log(`Unknown type: ${key} => ${value}`);
+            }
         }
         zip.generateAsync({type:"blob"})
             .then(function(blob) {
-              saveAsLegacy(blob, "test.zip");
+              saveAsLegacy(blob, name);
             });
     }
     function saveAsLegacy(content, filename) {
