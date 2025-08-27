@@ -9,11 +9,11 @@ window.addEventListener("message",event=>{
                 console.log(`String: ${key} => ${value}`);
                 zip.file(key,value);
             }else if(typeof value == "object") {
-                console.log(`Object: ${key} => ${value}`);
                 if(value.type == "base64" && typeof value.content == "string") {
+                    console.log(`Object: ${key} => ${JSON.stringify(value,null,2)}`);
                     zip.file(key,value.content, {base64: true});
                 }else{
-                    console.log(`Object [Malformed]: ${key} => ${value}`);
+                    console.log(`Object [Malformed]: ${key} => ${JSON.stringify(value,null,2)}`);
                 }
             }else{
                 console.log(`Unknown type: ${key} => ${value}`);
