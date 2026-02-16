@@ -23082,6 +23082,7 @@ function lockElementWithMessage(className,message,iconUrl='https://raw.githubuse
     element.append(ov);
   }
 }
+let myTimeout;
 function lockTheElementWithMessage(element,className,message,iconUrl='https://raw.githubusercontent.com/AlonsoAliaga/version-generator/main/assets/images/lock-icon.png') {
   element = document.getElementById(element);
   if(element) {
@@ -23113,6 +23114,9 @@ document.addEventListener("DOMContentLoaded", () => {
       loadChecking();
     },10000)
   },2500)
+  setTimeout(()=>{
+    if(typeof window.getRandomStyle == "undefined" && myTimeout == undefined) processAds();
+  },2000)
 });
 function removeInlineOnclicksFromAllChildren(parentElement) {
     if (!(parentElement instanceof HTMLElement)) {
