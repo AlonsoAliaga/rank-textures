@@ -271,7 +271,7 @@
         }
         //console.log(event)
         function start() {
-            if(adBlockEnabled) {
+            if(typeof adBlockEnabled == "undefined" || adBlockEnabled) {
                 let button = document.getElementById("support-button");
                 button.innerText = `🚫 Disable AdBlock to unlock special features.`;
                 return;
