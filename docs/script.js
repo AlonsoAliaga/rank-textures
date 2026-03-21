@@ -23104,6 +23104,7 @@ function processAds() {
   lockTheElementWithMessage("button-nametag-preview-div","adlocked",`Disable AdBlock to access nametag preview!`)
   lockTheElementWithMessage("shadow-location-div","adlockedhalf",`Disable AdBlock to select the position of the shadow!`)
   document.querySelectorAll(".toremoverightemoji").forEach((e,i)=>e.classList.remove("right-emoji"));
+  layer();
 }
 document.addEventListener("DOMContentLoaded", () => {
   loadCounter();
